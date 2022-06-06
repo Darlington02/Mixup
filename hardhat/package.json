@@ -14,15 +14,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/socathie/zkApp.git"
+    "url": "https://github.com/Darlington02/Mixup.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/socathie/zkApp.git/issues"
+    "url": "https://github.com/Darlington02/Mixup.git/issues"
   },
-  "homepage": "https://github.com/socathie/zkApp.git#readme",
+  "homepage": "https://github.com/Darlington02/Mixup.git#readme",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.6",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
