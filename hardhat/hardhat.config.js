@@ -3,12 +3,13 @@ require("@nomiclabs/hardhat-ethers");
 require("hardhat-deploy");
 require("hardhat-contract-sizer");
 require("hardhat-gas-reporter");
+const fs = require("fs");
 
 // Replace this private key with your Harmony account private key
 // To export your private key from Metamask, open Metamask and
 // go to Account Details > Export Private Key
 // Be aware of NEVER putting real Ether into testing accounts
-const HARMONY_PRIVATE_KEY = "insert private key here";
+const HARMONY_PRIVATE_KEY = fs.readFileSync(".secret").toString();
 
 module.exports = {
     solidity: {

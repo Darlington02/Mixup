@@ -40,5 +40,8 @@
     "hardhat-gas-reporter": "^1.0.7",
     "snarkjs": "^0.4.19",
     "web3-utils": "^1.7.0"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^4.6.0"
   }
 }
