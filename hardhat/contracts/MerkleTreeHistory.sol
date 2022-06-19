@@ -87,7 +87,7 @@ contract MerkleTreeHistory {
         return roots[index % ROOT_HISTORY_SIZE];
     }
 
-    // poseidon(keccak256("easy-links") % FIELD_SIZE)
+    // poseidon(keccak256("mixup") % FIELD_SIZE)
     function zeros(uint256 i) public pure returns (uint256) {
         if (i == 0) return 0x1b47eebd31a8cdbc109d42a60ae2f77d3916fdf63e1d6d3c9614c84c66587616;
         else if (i == 1) return 0x0998c45a8df60690d2142a1e29541e4c5203c5f0039e1f736a48a4ea3939996c;
