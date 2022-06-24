@@ -23,6 +23,7 @@ async function exportCallDataGroth16(input, wasmPath, zkeyPath) {
   }
 
   return { a, b, c, Input };
+  
 }
 
 module.exports = {

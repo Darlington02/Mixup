@@ -25,8 +25,8 @@ module.exports = {
             blockGasLimit: 0x1fffffffffffff
         },
         testnet: {
-            url: "https://api.s0.b.hmny.io",
-            chainId: 1666700000,
+            url: "https://api.s0.ps.hmny.io/",
+            chainId: 1666900000,
             accounts: [`${HARMONY_PRIVATE_KEY}`]
         },
         mainnet: {

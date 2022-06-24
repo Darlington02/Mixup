@@ -9,7 +9,7 @@ contract ERC20Mixup is Mixup {
     using SafeERC20 for IERC20;
     IERC20 public token;
     
-    constructor(IVerifier _verifier, IPoseidonHasher _hasher, uint256 _denomination, uint8 _merkleTreeHeight, IERC20 _token) Mixup(_verifier, _hasher, _denomination, _merkleTreeHeight) {
+    constructor(IVerifier _verifier, address _hasher, uint256 _denomination, uint8 _merkleTreeHeight, IERC20 _token) Mixup(_verifier, _hasher, _denomination, _merkleTreeHeight) {
         token = _token;
     }
 

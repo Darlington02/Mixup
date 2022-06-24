@@ -1,29 +1,41 @@
-pragma circom 2.0.3;
+pragma circom 2.0.0;
 
 include "../node_modules/circomlib/circuits/poseidon.circom";
-include "../node_modules/circomlib/circuits/comparators.circom";
-include "../node_modules/circomlib/circuits/switcher.circom";
 
+
+// if s == 0 returns [in[0], in[1]]
+// if s == 1 returns [in[1], in[0]]
+template DualMux() {
+    signal input in[2];
+    signal input s;
+    signal output out[2];
+
+    s * (1 - s) === 0;
+    out[0] <== (in[1] - in[0])*s + in[0];
+    out[1] <== (in[0] - in[1])*s + in[1];
+}
+
+// Verifies that merkle proof is correct for given merkle root and a leaf
+// pathIndices input is an array of 0/1 selectors telling whether given pathElement is on the left or right side of merkle path
 template MerkleProof(levels) {
-
     signal input leaf;
     signal input root;
     signal input pathElements[levels];
     signal input pathIndices[levels];
 
-    component switcher[levels];
-    component hasher[levels];
+    component selectors[levels];
+    component hashers[levels];
 
     for (var i = 0; i < levels; i++) {
-        switcher[i] = Switcher();
-        switcher[i].L <== i == 0 ? leaf : hasher[i - 1].out;
-        switcher[i].R <== pathElements[i];
-        switcher[i].sel <== pathIndices[i];
+        selectors[i] = DualMux();
+        selectors[i].in[0] <== i == 0 ? leaf : hashers[i - 1].out;
+        selectors[i].in[1] <== pathElements[i];
+        selectors[i].s <== pathIndices[i];
 
-        hasher[i] = Poseidon(2);
-        hasher[i].inputs[0] <== switcher[i].outL;
-        hasher[i].inputs[1] <== switcher[i].outR;
+        hashers[i] = Poseidon(2);
+        hashers[i].inputs[0] <== selectors[i].out[0];
+        hashers[i].inputs[1] <== selectors[i].out[1];
     }
 
-    root === hasher[levels - 1].out;
+    root === hashers[levels - 1].out;
 }

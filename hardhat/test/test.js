@@ -1,7 +1,9 @@
 const { expect, assert } = require("chai");
 const { ethers } = require("hardhat");
-const { poseidonContract } = require("circomlibjs");
-const { MerkleTree } = require('fixed-merkle-tree')
+const {BigNumber} = require("ethers");
+const { buildPoseidon, poseidonContract } = require("circomlibjs");
+const { MerkleTree } = require('fixed-merkle-tree');
+const { PoseidonHasher } = require('./utils/hasher');
 const { exportCallDataGroth16 } = require("./utils/utils");
 
 describe("ETHMixup", async function() {
@@ -15,8 +17,8 @@ describe("ETHMixup", async function() {
     let ethMixup
     let user
     let addrs
-    let levels = 16
-    let tree
+    let levels = 10
+    let poseidon
 
     beforeEach(async function() {
         // deploy verifier contract
@@ -42,10 +44,10 @@ describe("ETHMixup", async function() {
 
         // deploy ethmixup contract
         EthMixup = await ethers.getContractFactory("ETHMixup")
-        ethMixup = await EthMixup.deploy(mixupVerifier.address, commitmentHasher.address, 1, 10)
+        ethMixup = await EthMixup.deploy(mixupVerifier.address, commitmentHasher.address, 1, levels)
         await ethMixup.deployed();
 
-        tree = new MerkleTree(levels);
+        poseidon = new PoseidonHasher(await buildPoseidon());
 
         [user, ...addrs] = await ethers.getSigners()
 
@@ -77,7 +79,6 @@ describe("ETHMixup", async function() {
                 value: denomination,
             })
 
-            console.log(tx)
         })
 
         it("should not deposit for an already existing commitment", async function() {
@@ -100,40 +101,44 @@ describe("ETHMixup", async function() {
         })
     })
 
-    describe("Verify Proof", async function() {
+    describe("Proof Verification", async function() {
     
-        it("should withdraw", async function() {
-            
-            const denomination = 1
+        it("should verify proof", async function() {
+
+            // initiate a new merkle tree instance
+            const tree = new MerkleTree(levels, [], {
+                hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString()
+            });
+
             const secret = 1234
             const nullifier = 5678
             const commitment =  await commitmentHasher["poseidon(uint256[2])"]([secret, nullifier])
-        
+
+            // insert commitment into merkle tree
             tree.insert(commitment)
 
-            await ethMixup.deposit(commitment, {
-                value: denomination,
-            })
+            const { pathElements, pathIndices, pathRoot } = tree.proof(commitment)
 
-            const { pathElements, pathIndices, pathRoot } = tree.path(0)
+            // hash nullifier
+            const nullifierHashObject = await nullifierHasher["poseidon(uint256[1])"]([nullifier])
 
             const input = {
                 root: pathRoot,
-                nullifierHash: await nullifierHasher["poseidon(uint256[1])"]([nullifier]),
-                // private inputs
                 nullifier: nullifier,
                 secret: secret,
+                nullifierHash: nullifierHashObject.toString(),
                 pathElements: pathElements,
                 pathIndices: pathIndices
             }
 
+            // generate proof data
             let dataResult = await exportCallDataGroth16(
                 input,
                 "circuits/build/Withdraw_js/Withdraw.wasm",
                 "circuits/build/circuit_final.zkey"
-              );
+            );
           
-              // Call the function.
+              // Call the verify proof function
               let result = await mixupVerifier.verifyProof(
                 dataResult.a,
                 dataResult.b,
@@ -143,5 +148,104 @@ describe("ETHMixup", async function() {
               expect(result).to.equal(true);
         })
 
+    })
+
+    describe("Withdrawal", async function() {
+
+        it("should withdraw", async function() {
+
+            const denomination = 1
+            const secret = 1234
+            const nullifier = 5678
+            const commitment =  await commitmentHasher["poseidon(uint256[2])"]([secret, nullifier])
+
+            // deposit commitment
+            await ethMixup.deposit(commitment, {
+                value: denomination,
+            })
+
+            // initiate a new instance of merkle tree
+            const tree = new MerkleTree(levels, [], {
+                hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString(), zeroElement: "21663839004416932945382355908790599225266501822907911457504978515578255421292"
+            });
+
+            // insert commitment into merkle tree
+            tree.insert(commitment)
+
+            const { pathElements, pathIndices, pathRoot } = tree.proof(commitment)
+
+            // hash nullifier
+            const nullifierHashObject = await nullifierHasher["poseidon(uint256[1])"]([nullifier])
+
+            const input = {
+                root: pathRoot,
+                nullifier: nullifier,
+                secret: secret,
+                nullifierHash: nullifierHashObject.toString(),
+                pathElements: pathElements,
+                pathIndices: pathIndices
+            }
+
+            // generate proof data
+            let dataResult = await exportCallDataGroth16(
+                input,
+                "circuits/build/Withdraw_js/Withdraw.wasm",
+                "circuits/build/circuit_final.zkey"
+            );
+
+            // initiate withdraw
+            await ethMixup.withdraw(dataResult.a, dataResult.b, dataResult.c, pathRoot, input.nullifierHash, user.address)
+
+        })
+
+        it("should not withdraw same deposit twice", async function() {
+
+            const denomination = 1
+            const secret = 1234
+            const nullifier = 5678
+            const commitment =  await commitmentHasher["poseidon(uint256[2])"]([secret, nullifier])
+
+            // initiate a new deposit
+            await ethMixup.deposit(commitment, {
+                value: denomination,
+            })
+
+            // initialize a new merkle tree instance
+            const tree = new MerkleTree(levels, [], {
+                hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString(), zeroElement: "21663839004416932945382355908790599225266501822907911457504978515578255421292"
+            });
+
+            // insert commitment into merkle tree
+            tree.insert(commitment)
+
+            const { pathElements, pathIndices, pathRoot } = tree.proof(commitment)
+
+            // hash nullifier
+            const nullifierHashObject = await nullifierHasher["poseidon(uint256[1])"]([nullifier])
+
+            const input = {
+                root: pathRoot,
+                nullifier: nullifier,
+                secret: secret,
+                nullifierHash: nullifierHashObject.toString(),
+                pathElements: pathElements,
+                pathIndices: pathIndices
+            }
+
+            // get proof data
+            let dataResult = await exportCallDataGroth16(
+                input,
+                "circuits/build/Withdraw_js/Withdraw.wasm",
+                "circuits/build/circuit_final.zkey"
+            );
+
+            // withdraw deposit
+            await ethMixup.withdraw(dataResult.a, dataResult.b, dataResult.c, pathRoot, input.nullifierHash, user.address)
+
+            // try to withdraw same deposit again
+            await expect(ethMixup.withdraw(dataResult.a, dataResult.b, dataResult.c, pathRoot, input.nullifierHash, user.address)).to.be.revertedWith("Mixup: The note has already been spent")
+
+        })
+        
     })
 })

@@ -3,7 +3,7 @@ pragma solidity ^0.8.4;
 import "./Mixup.sol";
 
 contract ETHMixup is Mixup {
-    constructor(IVerifier _verifier, IPoseidonHasher _hasher, uint256 _denomination, uint8 _merkleTreeHeight) Mixup(_verifier, _hasher, _denomination, _merkleTreeHeight) {}
+    constructor(IVerifier _verifier, address _hasher, uint256 _denomination, uint32 _merkleTreeHeight) Mixup(_verifier, _hasher, _denomination, _merkleTreeHeight) {}
 
     function _processDeposit() internal override {
         require(msg.value == denomination, "Mixup: Please send `mixDenomination` ETH along with transaction");

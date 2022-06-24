@@ -49,5 +49,5 @@ template Withdraw(levels) {
     }
 }
 
-component main { public[root, nullifierHash] } = Withdraw(20);
+component main { public[root, nullifierHash] } = Withdraw(10);
 

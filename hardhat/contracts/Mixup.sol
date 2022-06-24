@@ -5,7 +5,13 @@ import "./MerkleTreeHistory.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 interface IVerifier {
-    function verifyProof(bytes memory _proof, uint256[2] memory _input) external returns (bool);
+    function verifyProof(
+      uint256[2] calldata a,
+      uint256[2][2] calldata b,
+      uint256[2] calldata c,
+      uint256[2] memory _input
+    ) 
+    external returns (bool);
 }
 
 abstract contract Mixup is MerkleTreeHistory, ReentrancyGuard {
@@ -26,7 +32,7 @@ abstract contract Mixup is MerkleTreeHistory, ReentrancyGuard {
         @param _merkleTreeHeight the height of deposits' Merkle Tree
   */
 
-  constructor(IVerifier _verifier, IPoseidonHasher _hasher, uint256 _denomination, uint8 _merkleTreeHeight) MerkleTreeHistory(_merkleTreeHeight, _hasher) {
+  constructor(IVerifier _verifier, address _hasher, uint256 _denomination, uint32 _merkleTreeHeight) MerkleTreeHistory(_merkleTreeHeight, _hasher) {
       require(_denomination > 0, "Mixup: Denomination should be greater than 0");
       verifier = _verifier;
       denomination = _denomination;
@@ -40,7 +46,7 @@ abstract contract Mixup is MerkleTreeHistory, ReentrancyGuard {
   function deposit(uint256 _commitment) external payable nonReentrant {
     require(!commitments[_commitment], "Mixup: The commitment has been submitted");
     
-    uint32 insertedIndex = insert(_commitment);
+    uint32 insertedIndex = _insert(_commitment);
     commitments[_commitment] = true;
     _processDeposit();
 
@@ -53,18 +59,30 @@ abstract contract Mixup is MerkleTreeHistory, ReentrancyGuard {
   /**
     @dev Withdraw a deposit from the contract.
   **/
-  function withdraw(bytes calldata _proof, uint256 _root, uint256 _nullifierHash, address payable _recipient) external payable nonReentrant {
+  function withdraw(
+      uint256[2] memory a,
+      uint256[2][2] memory b,
+      uint256[2] memory c,
+      uint256 _root,
+      uint256 _nullifierHash,
+      address payable _recipient
+    ) 
+    external payable nonReentrant {
+
       require(!nullifierHashes[_nullifierHash], "Mixup: The note has already been spent");
-      require(isValidRoot(_root), "Mixup: merkle root does not exist");
+      require(isKnownRoot(_root), "Mixup: merkle root does not exist");
 
       require(verifier.verifyProof(
-          _proof,
+          a,
+          b,
+          c,
           [uint256(_root), uint256(_nullifierHash)]
       ), "Mixup: Invalid withdraw proof");
 
       nullifierHashes[_nullifierHash] = true;
       _processWithdraw(_recipient);
       emit Withdrawal(_recipient, _nullifierHash);
+
   }
 
   /** @dev this function is defined in a child contract */
