@@ -1,0 +1,4 @@
+export const mixupVerifierAddress = "0xBb86856AeFf843b79c78e333A88Fb2245457e6f2"
+export const commitmentHasherAddress = "0xF9fC68AF87a7D8817F50394933E59A997D8817c1"
+export const nullifierHasherAddress = "0xcdb3e072eD8c116C65F9f91713F8833ff1fb11b0"
+export const ethMixupAddress = "0x3A87A6D435203e1d1fD972c00a830426396FF60A"

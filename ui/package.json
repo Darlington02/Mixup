@@ -9,10 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "circomlibjs": "^0.1.6",
+    "ethers": "^5.6.9",
+    "fixed-merkle-tree": "^0.7.3",
     "next": "12.1.6",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "snarkjs": "^0.4.22"
+    "snarkjs": "^0.4.22",
+    "web3modal": "^1.9.8"
   },
   "devDependencies": {
     "eslint": "8.18.0",

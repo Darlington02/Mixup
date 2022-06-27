@@ -29,19 +29,18 @@ module.exports = {
             chainId: 1666900000,
             accounts: [`${HARMONY_PRIVATE_KEY}`]
         },
+        devnet: {
+            url: "https://api.s0.ps.hmny.io/",
+            chainId: 1666900000,
+            accounts: [`${HARMONY_PRIVATE_KEY}`]
+        },
         mainnet: {
             url: "https://api.s0.t.hmny.io",
             chainId: 1666600000,
             accounts: [`${HARMONY_PRIVATE_KEY}`]
         },
     },
-    namedAccounts: {
-        deployer: 0,
-    },
-    paths: {
-        deploy: "deploy",
-        deployments: "deployments",
-    },
+    
     mocha: {
         timeout: 1000000
     }
