@@ -14,10 +14,10 @@ const buildPoseidon = require("circomlibjs").buildPoseidon;
 
 import { mixupVerifierAddress, ethMixupAddress, commitmentHasherAddress, nullifierHasherAddress }from '../config'
 
-import Verifier from '../../hardhat/artifacts/contracts/verifier.sol/Verifier.json'
-import ETHMixup from '../../hardhat/artifacts/contracts/ETHMixup.sol/ETHMixup.json'
-import CommitmentHasher from '../../hardhat/artifacts/contracts/commitmentHasher.json'
-import NullifierHasher from '../../hardhat/artifacts/contracts/nullifierHasher.json'
+import Verifier from '../abi/Verifier.json'
+import ETHMixup from '../abi/ETHMixup.json'
+import CommitmentHasher from '../abi/commitmentHasher.json'
+import NullifierHasher from '../abi/nullifierHasher.json'
 import { verify } from 'crypto';
 
 export default function Home() {
@@ -99,7 +99,7 @@ export default function Home() {
 
       // initiate a new merkle tree instance
       const tree = new MerkleTree(10, [], {
-          hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString()
+          hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString(), zeroElement: "21663839004416932945382355908790599225266501822907911457504978515578255421292"
       });
 
       // insert commitment into merkle tree
@@ -175,8 +175,14 @@ export default function Home() {
 
       // insert commitment into merkle tree
       tree.insert(commitment)
+      
 
       const { pathElements, pathIndices, pathRoot } = tree.proof(commitment)
+
+      const root = await contract.roots(0)
+      const rootCon = BigNumber.from(root).toString()
+        console.log(rootCon)
+        console.log(pathRoot)
 
       // hash nullifier
       const nullifierHashObject = await nullifierHasher["poseidon(uint256[1])"]([nullifier])
@@ -189,6 +195,9 @@ export default function Home() {
           pathElements: pathElements,
           pathIndices: pathIndices
       }
+
+      console.log(input)
+      // 4541946972422392857377524277636308025837776692276291
 
       // generate proof data
       let dataResult = await exportCallDataGroth16(
@@ -208,7 +217,7 @@ export default function Home() {
     }
     catch(error){
       alert(error.message)
-      setStatus("unverified")
+      // setStatus("unverified")
     }
     
   }
@@ -234,7 +243,7 @@ export default function Home() {
         <div className={styles.grid}>
           <a href="#" className={styles.card}>
             <h2>Deposit &rarr;</h2>
-            <p>Ensure to backup your note as you'd need it for withdrawal</p>
+            <p>Ensure to backup your note as you will need it for withdrawal</p>
             <div className={styles.note}>
               <input type="text" className={styles.input} placeholder="Enter Note" value={note} onChange={(e) => setNote(e.target.value)} />
               <input type="submit" className={styles.copyBtn} value="Generate Note" onClick={() => generateNote()} />
