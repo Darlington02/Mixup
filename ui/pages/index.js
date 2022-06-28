@@ -4,7 +4,7 @@ import styles from '../styles/Home.module.css'
 
 import { ethers } from 'ethers'
 const {BigNumber} = require("ethers");
-const { PoseidonHasher } = require('./utils/hasher');
+const { PoseidonHasher } = require('../utils/hasher');
 const { exportCallDataGroth16 } = require("../zkproof/snarkjsZkproof");
 const { MerkleTree } = require('fixed-merkle-tree');
 import { useEffect, useState } from 'react'
