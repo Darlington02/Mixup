@@ -1,124 +1,106 @@
 // SPDX-License-Identifier: MIT
-
 pragma solidity ^0.8.4;
 
-interface Hasher {
-    function poseidon(uint256[2] calldata leftRight)
-        external
-        pure
-        returns (uint256);
+interface IPoseidonHasher {
+    function poseidon(uint256[2] calldata inputs) external pure returns (uint256);
 }
 
 contract MerkleTreeHistory {
-    uint256 public constant FIELD_SIZE =
-        21888242871839275222246405745257275088548364400416034343698204186575808495617;
-    uint256 public constant ZERO_VALUE =
-        21663839004416932945382355908790599225266501822907911457504978515578255421292; // = keccak256("tornado") % FIELD_SIZE
 
-    Hasher public hasher;
+    uint256 public constant FIELD_SIZE = 21888242871839275222246405745257275088548364400416034343698204186575808495617;
+    uint32 public constant ROOT_HISTORY_SIZE = 30;
 
-    uint32 public immutable levels;
+    IPoseidonHasher public immutable hasher;
 
-    // the following variables are made public for easier testing and debugging and
-    // are not supposed to be accessed in regular code
-    uint256[] public filledSubtrees;
-    uint256[] public zeros;
-    uint32 public currentRootIndex = 0;
-    uint32 public nextIndex = 0;
-    uint32 public constant ROOT_HISTORY_SIZE = 100;
-    uint256[ROOT_HISTORY_SIZE] public roots;
+    uint32 public levels;
+    uint32 public immutable maxSize;
 
-    constructor(uint32 _treeLevels, address _hasher) {
-        require(_treeLevels > 0, "_treeLevels should be greater than zero");
-        require(_treeLevels < 32, "_treeLevels should be less than 32");
+    uint32 public index = 0;
+    mapping(uint32 => uint256) public levelHashes;
+    mapping(uint256 => uint256) public roots;
+    uint256[] public leaves;
 
-        hasher = Hasher(_hasher);
-        levels = _treeLevels;
+    constructor(uint32 _merkleTreeHeight, address _hasher) {
+        require(_merkleTreeHeight > 0, "_levels should be greater than 0");
+        require(_merkleTreeHeight <= 10, "_levels should not be greater than 10");
+        levels = _merkleTreeHeight;
+        hasher = IPoseidonHasher(_hasher);
+        maxSize = uint32(2) ** levels;
 
-        uint256 currentZero = uint256(ZERO_VALUE);
-        zeros.push(currentZero);
-        filledSubtrees.push(currentZero);
-
-        for (uint32 i = 1; i < _treeLevels; i++) {
-            currentZero = hashLeftRight(currentZero, currentZero);
-            zeros.push(currentZero);
-            filledSubtrees.push(currentZero);
+        for (uint32 i = 0; i < _merkleTreeHeight; i++) {
+            levelHashes[i] = zeros(i);
         }
-
-        roots[0] = hashLeftRight(currentZero, currentZero);
     }
 
-    /**
-    @dev Hash 2 tree leaves, returns MiMC(_left, _right)
-  */
-    function hashLeftRight(uint256 _left, uint256 _right)
-        public
-        view
-        returns (uint256)
-    {
-        require(
-            uint256(_left) < FIELD_SIZE,
-            "_left should be inside the field"
-        );
-        require(
-            uint256(_right) < FIELD_SIZE,
-            "_right should be inside the field"
-        );
-        uint256[2] memory leftright = [_left, _right];
-        return hasher.poseidon(leftright);
-    }
+    function _insert(uint256 leaf) internal returns (uint32) {
+        require(index != maxSize, "Merkle tree is full");
+        require(leaf < FIELD_SIZE, "Leaf has to be within field size");
 
-    function _insert(uint256 _leaf) internal returns (uint32 index) {
-        uint32 currentIndex = nextIndex;
-        require(
-            currentIndex != uint32(2)**levels,
-            "Merkle tree is full. No more leafs can be added"
-        );
-        nextIndex += 1;
-        uint256 currentLevelHash = _leaf;
+        leaves.push(leaf);
+
+        uint32 currentIndex = index;
+        uint256 currentLevelHash = leaf;
         uint256 left;
         uint256 right;
 
         for (uint32 i = 0; i < levels; i++) {
             if (currentIndex % 2 == 0) {
                 left = currentLevelHash;
-                right = zeros[i];
-
-                filledSubtrees[i] = currentLevelHash;
+                right = zeros(i);
+                levelHashes[i] = currentLevelHash;
             } else {
-                left = filledSubtrees[i];
+                left = levelHashes[i];
                 right = currentLevelHash;
             }
 
-            currentLevelHash = hashLeftRight(left, right);
-
+            currentLevelHash = hasher.poseidon([left, right]);
             currentIndex /= 2;
         }
 
-        currentRootIndex = (currentRootIndex + 1) % ROOT_HISTORY_SIZE;
-        roots[currentRootIndex] = currentLevelHash;
-        return nextIndex - 1;
+        roots[index % ROOT_HISTORY_SIZE] = currentLevelHash;
+
+        index++;
+        return index - 1;
     }
 
-    /**
-    @dev Whether the root is present in the root history
-  */
-    function isKnownRoot(uint256 _root) public view returns (bool) {
-        if (_root == 0) return false;
+    function isKnownRoot(uint256 root) public view returns (bool) {
+        if (root == 0) {
+            return false;
+        }
 
-        uint32 i = currentRootIndex;
+        uint32 currentIndex = index % ROOT_HISTORY_SIZE;
+        uint32 i = currentIndex;
         do {
-            if (_root == roots[i]) return true;
-            if (i == 0) i = ROOT_HISTORY_SIZE;
+            if (roots[i] == root) {
+                return true;
+            }
+
+            if (i == 0) {
+                i = ROOT_HISTORY_SIZE;
+            }
             i--;
-        } while (i != currentRootIndex);
+        }
+        while (i != currentIndex);
+
         return false;
     }
 
-    /**
-    @dev Returns the last root
-  */
-    function getLastRoot() public view returns (uint256) {
-        return roots[currentRootIndex];
+    function getLeavesLength() public view returns(uint256) {
+        return leaves.length;
+    }
+
+    // poseidon(keccak256("easy-links") % FIELD_SIZE)
+    function zeros(uint256 i) public pure returns (uint256) {
+        if (i == 0) return 0x1b47eebd31a8cdbc109d42a60ae2f77d3916fdf63e1d6d3c9614c84c66587616;
+        else if (i == 1) return 0x0998c45a8df60690d2142a1e29541e4c5203c5f0039e1f736a48a4ea3939996c;
+        else if (i == 2) return 0x1b8525aeb12de720fbc32b7a5b505efc1bd4396e223644aed9d48c4ecc5a6451;
+        else if (i == 3) return 0x1937e198ced295751ebf9996ad4429473bb657521a76f372ab62eab9dd09f729;
+        else if (i == 4) return 0x043fae75b0a1c6cfe6bbd4a260fc421f26cd352974d31d3627896a677f3931a3;
+        else if (i == 5) return 0x7c68bad132df37627c5fa5e1c06601d5af97124b0bd19f6e29593e1814ae51;
+        else if (i == 6) return 0x2aca3ddb1f0c22cd53383b85231c1a10634f160ce945c639b2b799ed8b37f5ae;
+        else if (i == 7) return 0x037ca32d66c15af3f7cb3cbc7d5b0fad9104582d24416fdd85c50586d3079a0e;
+        else if (i == 8) return 0x1c9e22b869e38db54e772baa9a4765b9ccb1ea458ea4a50c3ce9ce5152a95581;
+        else if (i == 9) return 0x283f3963c14e4a1873557637cf74773b5de1d3dcafa8c2c82f18720fabd5e0f9;
+        else revert("Index out of bounds");
     }
 }

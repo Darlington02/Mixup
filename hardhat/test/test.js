@@ -166,7 +166,7 @@ describe("ETHMixup", async function() {
 
             // initiate a new instance of merkle tree
             const tree = new MerkleTree(levels, [], {
-                hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString(), zeroElement: "21663839004416932945382355908790599225266501822907911457504978515578255421292"
+                hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString(), zeroElement: "12339540769637658105100870666479336797812683353093222300453955367174479050262"
             });
 
             // insert commitment into merkle tree
@@ -212,7 +212,7 @@ describe("ETHMixup", async function() {
 
             // initialize a new merkle tree instance
             const tree = new MerkleTree(levels, [], {
-                hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString(), zeroElement: "21663839004416932945382355908790599225266501822907911457504978515578255421292"
+                hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString(), zeroElement: "12339540769637658105100870666479336797812683353093222300453955367174479050262"
             });
 
             // insert commitment into merkle tree

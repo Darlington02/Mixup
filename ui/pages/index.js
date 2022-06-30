@@ -12,7 +12,7 @@ import Web3Modal from "web3modal"
 
 const buildPoseidon = require("circomlibjs").buildPoseidon;
 
-import { mixupVerifierAddress, ethMixupAddress, commitmentHasherAddress, nullifierHasherAddress }from '../config'
+import { mixupVerifierAddress, commitmentHasherAddress, nullifierHasherAddress, ethMixupAddress500, ethMixupAddress1000, ethMixupAddress5000, ethMixupAddress10000, ethMixupAddress50000 }from '../config'
 
 import Verifier from '../abi/Verifier.json'
 import ETHMixup from '../abi/ETHMixup.json'
@@ -23,7 +23,9 @@ import { verify } from 'crypto';
 export default function Home() {
 
   const [ note, setNote ] = useState('')
+  const [ depositAmount, setDepositAmount ] = useState('')
   const [ withdrawalNote, setWithdrawalNote ] = useState('')
+  const [ withdrawalAmount, setWithdrawalAmount ] = useState('')
   const [ recipient, setRecipient ] = useState('')
   const [ status, setStatus ] = useState('')
 
@@ -36,7 +38,7 @@ export default function Home() {
     setNote(randPassword)
 
     navigator.clipboard.writeText(randPassword)
-    alert("Generated password added to your clipboard! Ensure to save somewhere")
+    alert("Your generated note has been copied to your clipboard! Endeavour to back it up")
 
   }
 
@@ -46,13 +48,30 @@ export default function Home() {
         const web3Modal = new Web3Modal()
         const connection = await web3Modal.connect()
         const provider = new ethers.providers.Web3Provider(connection)
+        let contractAddress
+
+        if(depositAmount == 1000){
+          contractAddress = ethMixupAddress1000
+        }
+        else if(depositAmount == 5000){
+          contractAddress = ethMixupAddress5000
+        }
+        else if(depositAmount == 10000){
+          contractAddress = ethMixupAddress10000
+        }
+        else if(depositAmount == 50000){
+          contractAddress = ethMixupAddress50000
+        }
+        else{
+          contractAddress = ethMixupAddress500
+        }
 
         const signer = provider.getSigner()
-        const contract = new ethers.Contract(ethMixupAddress, ETHMixup.abi, signer)
+        const contract = new ethers.Contract(contractAddress, ETHMixup.abi, signer)
         const commitmentHasher = new ethers.Contract(commitmentHasherAddress, CommitmentHasher.abi, signer)
         const nullifierHasher = new ethers.Contract(nullifierHasherAddress, NullifierHasher.abi, signer)
 
-        const denomination = 10
+        const denomination = depositAmount
         const secret = note
         const nullifier = await nullifierHasher["poseidon(uint256[1])"]([secret])
         const commit = await commitmentHasher["poseidon(uint256[2])"]([secret, nullifier])
@@ -119,8 +138,6 @@ export default function Home() {
           pathIndices: pathIndices
       }
 
-      console.log(input)
-
       // generate proof data
       let dataResult = await exportCallDataGroth16(
           input,
@@ -157,10 +174,28 @@ export default function Home() {
 
       const poseidon = new PoseidonHasher(await buildPoseidon());
 
+      let contractAddress
+
+        if(withdrawalAmount == 1000){
+          contractAddress = ethMixupAddress1000
+        }
+        else if(withdrawalAmount == 5000){
+          contractAddress = ethMixupAddress5000
+        }
+        else if(withdrawalAmount == 10000){
+          contractAddress = ethMixupAddress10000
+        }
+        else if(withdrawalAmount == 50000){
+          contractAddress = ethMixupAddress50000
+        }
+        else{
+          contractAddress = ethMixupAddress500
+        }
+
       const commitmentHasher = new ethers.Contract(commitmentHasherAddress, CommitmentHasher.abi, signer)
       const nullifierHasher = new ethers.Contract(nullifierHasherAddress, NullifierHasher.abi, signer)
       const mixupVerifier = new ethers.Contract(mixupVerifierAddress, Verifier.abi, signer)
-      const contract = new ethers.Contract(ethMixupAddress, ETHMixup.abi, signer)
+      const contract = new ethers.Contract(contractAddress, ETHMixup.abi, signer)
 
       const secret = withdrawalNote
       const nullifier = await nullifierHasher["poseidon(uint256[1])"]([secret])
@@ -170,19 +205,27 @@ export default function Home() {
 
       // initiate a new merkle tree instance
       const tree = new MerkleTree(10, [], {
-          hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString(), zeroElement: "21663839004416932945382355908790599225266501822907911457504978515578255421292"
+          hashFunction: (secret, nullifier) => poseidon.hash(secret, nullifier).toString(), zeroElement: "12339540769637658105100870666479336797812683353093222300453955367174479050262"
       });
 
+      const leaves = []
+      const leavesLength = await contract.getLeavesLength()
+
+      for(let i = 0; i < leavesLength; i++) {
+        const leaf = await contract.leaves(i)
+        const commitedCommitment = BigNumber.from(leaf).toString()
+        leaves.push(commitedCommitment)
+      }
+
       // insert commitment into merkle tree
-      tree.insert(commitment)
-      
+      if(leaves.length == 1){
+        tree.insert(...leaves)
+      }
+      else{
+        tree.bulkInsert([...leaves])
+      }
 
       const { pathElements, pathIndices, pathRoot } = tree.proof(commitment)
-
-      const root = await contract.roots(0)
-      const rootCon = BigNumber.from(root).toString()
-        console.log(rootCon)
-        console.log(pathRoot)
 
       // hash nullifier
       const nullifierHashObject = await nullifierHasher["poseidon(uint256[1])"]([nullifier])
@@ -196,9 +239,6 @@ export default function Home() {
           pathIndices: pathIndices
       }
 
-      console.log(input)
-      // 4541946972422392857377524277636308025837776692276291
-
       // generate proof data
       let dataResult = await exportCallDataGroth16(
           input,
@@ -207,7 +247,7 @@ export default function Home() {
       );
 
       // initiate withdraw
-      const tx = await contract.withdraw(dataResult.a, dataResult.b, dataResult.c, pathRoot, input.nullifierHash, recipient)
+      const tx = await contract.withdraw(dataResult.a, dataResult.b, dataResult.c, input.root, input.nullifierHash, recipient)
 
       await tx.wait()
       setStatus("unverified")
@@ -225,14 +265,14 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>Create Next App</title>
-        <meta name="description" content="Generated by create next app" />
+        <title>ZK Privacy Mixer - Mixup</title>
+        <meta name="description" content="ZK Privacy Mixer - Mixup" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <main className={styles.main}>
         <h1 className={styles.title}>
-          ZK Privacy Mixer - <a href="#">Mixup</a>
+          ZK Mixer - <a href="#">Mixup</a>
         </h1>
 
         <p className={styles.description}>
@@ -243,18 +283,48 @@ export default function Home() {
         <div className={styles.grid}>
           <a href="#" className={styles.card}>
             <h2>Deposit &rarr;</h2>
-            <p>Ensure to backup your note as you will need it for withdrawal</p>
+            <p className={styles.warning}>Ensure to backup your note as you will need it for withdrawal</p>
             <div className={styles.note}>
               <input type="text" className={styles.input} placeholder="Enter Note" value={note} onChange={(e) => setNote(e.target.value)} />
-              <input type="submit" className={styles.copyBtn} value="Generate Note" onClick={() => generateNote()} />
+              <input type="submit" className={styles.copyBtn} value="Get Note" onClick={() => generateNote()} />
             </div>
-            <p>This experimental version of Mixup supports only a denomination of 10 ONE.</p>
+
+            <p className={styles.warning}>Select Denomination</p>
+            <div className={styles.denominations}>
+              <label for="500" className="label">500</label>
+              <input type="radio" name="denomination" id="500" value="500" onClick={() => setDepositAmount(500)} />
+              <label for="1000" className="label">1000</label>
+              <input type="radio" name="denomination" id="1000" value="1000" onClick={() => setDepositAmount(1000)} />
+              <label for="5000" className="label">5000</label>
+              <input type="radio" name="denomination" id="5000" value="5000" onClick={() => setDepositAmount(5000)} />
+              <label for="10000" className="label">10000</label>
+              <input type="radio" name="denomination" id="10000" value="10000" onClick={() => setDepositAmount(10000)} />
+              <label for="50000" className="label">50000</label>
+              <input type="radio" name="denomination" id="50000" value="50000" onClick={() => setDepositAmount(50000)} />
+            </div>
+
             <input type="submit" className={styles.button} value="Deposit" onClick={() => deposit()} />
 
+            <hr />
             <h2 className={styles.withdraw}>Withdraw &rarr;</h2>
-            <p>Enter Deposit secret Note</p>
+            <p className={styles.warning}>Enter Deposit secret Note</p>
+
             <input type="text" className={styles.input} placeholder="Enter Note" onChange={(e) => setWithdrawalNote(e.target.value)} />
-            <p>For better anonymity, ensure to use a different wallet address from the depositor.</p>
+
+            <p className={styles.warning}>Select Denomination</p>
+            <div className={styles.denominations}>
+              <label for="w500" className="label">500</label>
+              <input type="radio" name="denomination" id="w500" value="500" onClick={() => setWithdrawalAmount(500)} />
+              <label for="w1000" className="label">1000</label>
+              <input type="radio" name="denomination" id="w1000" value="1000" onClick={() => setWithdrawalAmount(1000)} />
+              <label for="w5000" className="label">5000</label>
+              <input type="radio" name="denomination" id="w5000" value="5000" onClick={() => setWithdrawalAmount(5000)} />
+              <label for="w10000" className="label">10000</label>
+              <input type="radio" name="denomination" id="w10000" value="10000" onClick={() => setWithdrawalAmount(10000)} />
+              <label for="w50000" className="label">50000</label>
+              <input type="radio" name="denomination" id="w50000" value="50000" onClick={() => setWithdrawalAmount(50000)} />
+            </div>
+
             <input type="text" className={styles.input} placeholder="Enter Recipient" onChange={(e) => setRecipient(e.target.value)} />
 
             {

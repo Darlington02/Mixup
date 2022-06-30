@@ -26,11 +26,35 @@ const main = async () => {
     await nullifierHasher.deployed();
     console.log("NullifierHasher Contract deployed to:", nullifierHasher.address);
 
-    // deploy ethmixup contract
-    const EthMixup = await hre.ethers.getContractFactory("ETHMixup");
-    const ethMixup = await EthMixup.deploy(mixupVerifier.address, commitmentHasher.address, "10000000000000000000", 10);
-    await ethMixup.deployed();
-    console.log("EthMixup Contract deployed to:", ethMixup.address);
+    // deploy ethmixup contract [500 ONE POOL]
+    const EthMixup1 = await hre.ethers.getContractFactory("ETHMixup");
+    const ethMixup1 = await EthMixup1.deploy(mixupVerifier.address, commitmentHasher.address, "500000000000000000000", 10);
+    await ethMixup1.deployed();
+    console.log("EthMixup [500 ONE] Contract deployed to:", ethMixup1.address);
+  
+    // deploy ethmixup contract [1000 ONE POOL]
+    const EthMixup2 = await hre.ethers.getContractFactory("ETHMixup");
+    const ethMixup2 = await EthMixup2.deploy(mixupVerifier.address, commitmentHasher.address, "1000000000000000000000", 10);
+    await ethMixup2.deployed();
+    console.log("EthMixup [1000 ONE] Contract deployed to:", ethMixup2.address);
+
+    // deploy ethmixup contract [5000 ONE POOL]
+    const EthMixup3 = await hre.ethers.getContractFactory("ETHMixup");
+    const ethMixup3 = await EthMixup3.deploy(mixupVerifier.address, commitmentHasher.address, "5000000000000000000000", 10);
+    await ethMixup3.deployed();
+    console.log("EthMixup [5000 ONE] Contract deployed to:", ethMixup3.address);
+
+    // deploy ethmixup contract [10000 ONE POOL]
+    const EthMixup4 = await hre.ethers.getContractFactory("ETHMixup");
+    const ethMixup4 = await EthMixup4.deploy(mixupVerifier.address, commitmentHasher.address, "10000000000000000000000", 10);
+    await ethMixup4.deployed();
+    console.log("EthMixup [10000 ONE] Contract deployed to:", ethMixup4.address);
+
+    // deploy ethmixup contract [50000 ONE POOL]
+    const EthMixup5 = await hre.ethers.getContractFactory("ETHMixup");
+    const ethMixup5 = await EthMixup5.deploy(mixupVerifier.address, commitmentHasher.address, "50000000000000000000000", 10);
+    await ethMixup5.deployed();
+    console.log("EthMixup [50000] Contract deployed to:", ethMixup5.address);
 
 };
 
@@ -45,9 +69,3 @@ const runMain = async () => {
 };
 
 runMain();
-
-
-// MixupVerifier Contract deployed to: 0x81Dd889fC544B648c6c7D10621158C0B848224a5
-// CommitmentHasher Contract deployed to: 0xE9B8072643f80B1869Ae45Bf0Cd8feFF414eb37A
-// NullifierHasher Contract deployed to: 0x25C80a382697Ab6547b6946e5cB18a81dECF7438
-// EthMixup Contract deployed to: 0xBf4274C6DA999D075b0792918Dc7C6794b0e35E7
