@@ -292,6 +292,7 @@ export default function Home() {
     }
     catch(error){
       alert(error.message)
+      setLoading(false)
       setStatus("unverified")
     }
     
