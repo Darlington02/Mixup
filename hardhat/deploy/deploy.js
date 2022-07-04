@@ -26,33 +26,37 @@ const main = async () => {
     await nullifierHasher.deployed();
     console.log("NullifierHasher Contract deployed to:", nullifierHasher.address);
 
-    // deploy ethmixup contract [500 ONE POOL]
+    // deploy forwarder contract
+    const Forwarder = await hre.ethers.getContractFactory("MinimalForwarder")
+    const forwarder = await Forwarder.deploy();
+
+    // deploy ethmixup contract [10 ONE POOL]
     const EthMixup1 = await hre.ethers.getContractFactory("ETHMixup");
-    const ethMixup1 = await EthMixup1.deploy(mixupVerifier.address, commitmentHasher.address, "500000000000000000000", 10);
+    const ethMixup1 = await EthMixup1.deploy(forwarder.address, mixupVerifier.address, commitmentHasher.address, "10000000000000000000", 10);
     await ethMixup1.deployed();
-    console.log("EthMixup [500 ONE] Contract deployed to:", ethMixup1.address);
+    console.log("EthMixup [10 ONE] Contract deployed to:", ethMixup1.address);
   
     // deploy ethmixup contract [1000 ONE POOL]
     const EthMixup2 = await hre.ethers.getContractFactory("ETHMixup");
-    const ethMixup2 = await EthMixup2.deploy(mixupVerifier.address, commitmentHasher.address, "1000000000000000000000", 10);
+    const ethMixup2 = await EthMixup2.deploy(forwarder.address, mixupVerifier.address, commitmentHasher.address, "1000000000000000000000", 10);
     await ethMixup2.deployed();
     console.log("EthMixup [1000 ONE] Contract deployed to:", ethMixup2.address);
 
     // deploy ethmixup contract [5000 ONE POOL]
     const EthMixup3 = await hre.ethers.getContractFactory("ETHMixup");
-    const ethMixup3 = await EthMixup3.deploy(mixupVerifier.address, commitmentHasher.address, "5000000000000000000000", 10);
+    const ethMixup3 = await EthMixup3.deploy(forwarder.address, mixupVerifier.address, commitmentHasher.address, "5000000000000000000000", 10);
     await ethMixup3.deployed();
     console.log("EthMixup [5000 ONE] Contract deployed to:", ethMixup3.address);
 
     // deploy ethmixup contract [10000 ONE POOL]
     const EthMixup4 = await hre.ethers.getContractFactory("ETHMixup");
-    const ethMixup4 = await EthMixup4.deploy(mixupVerifier.address, commitmentHasher.address, "10000000000000000000000", 10);
+    const ethMixup4 = await EthMixup4.deploy(forwarder.address, mixupVerifier.address, commitmentHasher.address, "10000000000000000000000", 10);
     await ethMixup4.deployed();
     console.log("EthMixup [10000 ONE] Contract deployed to:", ethMixup4.address);
 
     // deploy ethmixup contract [50000 ONE POOL]
     const EthMixup5 = await hre.ethers.getContractFactory("ETHMixup");
-    const ethMixup5 = await EthMixup5.deploy(mixupVerifier.address, commitmentHasher.address, "50000000000000000000000", 10);
+    const ethMixup5 = await EthMixup5.deploy(forwarder.address, mixupVerifier.address, commitmentHasher.address, "50000000000000000000000", 10);
     await ethMixup5.deployed();
     console.log("EthMixup [50000] Contract deployed to:", ethMixup5.address);
 

@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.6.0",
-    "fixed-merkle-tree": "^0.7.3"
+    "fixed-merkle-tree": "^0.7.3",
+    "openzeppelin-solidity": "^4.6.0"
   }
 }

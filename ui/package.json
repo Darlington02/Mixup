@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "circomlibjs": "^0.1.6",
+    "dotenv": "^16.0.1",
     "ethers": "^5.6.9",
     "fixed-merkle-tree": "^0.7.3",
     "next": "12.1.6",

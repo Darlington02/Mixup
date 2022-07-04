@@ -9,19 +9,21 @@ const { exportCallDataGroth16 } = require("../zkproof/snarkjsZkproof");
 const { MerkleTree } = require('fixed-merkle-tree');
 import { useEffect, useState } from 'react'
 import Web3Modal from "web3modal"
+require('dotenv').config()
 
 const buildPoseidon = require("circomlibjs").buildPoseidon;
 
-import { mixupVerifierAddress, commitmentHasherAddress, nullifierHasherAddress, ethMixupAddress500, ethMixupAddress1000, ethMixupAddress5000, ethMixupAddress10000, ethMixupAddress50000 }from '../config'
+import { mixupVerifierAddress, commitmentHasherAddress, nullifierHasherAddress, ethMixupAddress10, ethMixupAddress1000, ethMixupAddress5000, ethMixupAddress10000, ethMixupAddress50000 }from '../config'
 
 import Verifier from '../abi/Verifier.json'
-import ETHMixup from '../abi/ETHMixup.json'
+import ETHMixup from '../abi/EthMixup.json'
 import CommitmentHasher from '../abi/commitmentHasher.json'
 import NullifierHasher from '../abi/nullifierHasher.json'
 import { verify } from 'crypto';
 
 export default function Home() {
 
+  const [loading, setLoading] = useState(false)
   const [ note, setNote ] = useState('')
   const [ depositAmount, setDepositAmount ] = useState('')
   const [ withdrawalNote, setWithdrawalNote ] = useState('')
@@ -63,7 +65,7 @@ export default function Home() {
           contractAddress = ethMixupAddress50000
         }
         else{
-          contractAddress = ethMixupAddress500
+          contractAddress = ethMixupAddress10
         }
 
         const signer = provider.getSigner()
@@ -73,6 +75,7 @@ export default function Home() {
 
         const denomination = depositAmount
         const secret = note
+
         const nullifier = await nullifierHasher["poseidon(uint256[1])"]([secret])
         const commit = await commitmentHasher["poseidon(uint256[2])"]([secret, nullifier])
 
@@ -85,6 +88,7 @@ export default function Home() {
         })
 
         await transaction.wait()
+    
         alert("Deposit into Mixup was successful")
 
       }
@@ -95,6 +99,8 @@ export default function Home() {
   }
 
   async function verify() {
+
+    setLoading(true)
     
     try{
       const web3Modal = new Web3Modal()
@@ -156,6 +162,8 @@ export default function Home() {
         setStatus("verified")
 
       if(result == true) alert("Your proof was successfully generated, you can go ahead to withdraw!")
+
+      setLoading(false)
     }
     catch(error){
       alert(error.message)
@@ -164,6 +172,8 @@ export default function Home() {
   }
 
   async function withdraw() {
+
+    setLoading(true)
     
     try{
       const web3Modal = new Web3Modal()
@@ -189,12 +199,11 @@ export default function Home() {
           contractAddress = ethMixupAddress50000
         }
         else{
-          contractAddress = ethMixupAddress500
+          contractAddress = ethMixupAddress10
         }
 
       const commitmentHasher = new ethers.Contract(commitmentHasherAddress, CommitmentHasher.abi, signer)
       const nullifierHasher = new ethers.Contract(nullifierHasherAddress, NullifierHasher.abi, signer)
-      const mixupVerifier = new ethers.Contract(mixupVerifierAddress, Verifier.abi, signer)
       const contract = new ethers.Contract(contractAddress, ETHMixup.abi, signer)
 
       const secret = withdrawalNote
@@ -247,17 +256,43 @@ export default function Home() {
       );
 
       // initiate withdraw
-      const tx = await contract.withdraw(dataResult.a, dataResult.b, dataResult.c, input.root, input.nullifierHash, recipient)
+      const webhook = `https://api.defender.openzeppelin.com/autotasks/${process.env.NEXT_PUBLIC_AUTOTASK_WEBHOOK}`
+ 
+      let autotaskResponse = await fetch(
+        webhook,
+        {
+          method: 'POST',
+          body: JSON.stringify({ // Autotask webhook expects a JSON string in the request's body
+            contractAddress: contractAddress,
+            dataResultA: dataResult.a,
+            dataResultB: dataResult.b,
+            dataResultC: dataResult.c,
+            root: input.root,
+            nullifierHash: input.nullifierHash,
+            recipient: recipient
+          })
+        }
+      );
 
-      await tx.wait()
-      setStatus("unverified")
-      alert("Your withdrawal was processed successfully!")
+      const autotaskResult = await autotaskResponse.json();
+
+      console.log(autotaskResult)
+
+      if (autotaskResult.status === 'success') {
+        alert("Your withdrawal was processed successfully!")
+      } else {
+        alert("There was an issue while processing your withdrawal, Try again!")
+        console.error(`Autotask run failed with result ${JSON.stringify(autotaskResult)}`);
+        return res.status(500).json({})
+      }
+
+      setLoading(false)
       window.location.reload()
 
     }
     catch(error){
       alert(error.message)
-      // setStatus("unverified")
+      setStatus("unverified")
     }
     
   }
@@ -280,8 +315,16 @@ export default function Home() {
           <code className={styles.code}>zkSnarks!</code>
         </p>
 
+        {
+          loading && (
+            <div className={styles.spinnerWrapper}>
+              <div className={styles.spinner}></div>
+            </div>
+          )
+        }
+
         <div className={styles.grid}>
-          <a href="#" className={styles.card}>
+          <div className={styles.card}>
             <h2>Deposit &rarr;</h2>
             <p className={styles.warning}>Ensure to backup your note as you will need it for withdrawal</p>
             <div className={styles.note}>
@@ -291,15 +334,15 @@ export default function Home() {
 
             <p className={styles.warning}>Select Denomination</p>
             <div className={styles.denominations}>
-              <label for="500" className="label">500</label>
-              <input type="radio" name="denomination" id="500" value="500" onClick={() => setDepositAmount(500)} />
-              <label for="1000" className="label">1000</label>
+              <label htmlFor="10" className="label">10</label>
+              <input type="radio" name="denomination" id="10" value="10" onClick={() => setDepositAmount(10)} />
+              <label htmlFor="1000" className="label">1000</label>
               <input type="radio" name="denomination" id="1000" value="1000" onClick={() => setDepositAmount(1000)} />
-              <label for="5000" className="label">5000</label>
+              <label htmlFor="5000" className="label">5000</label>
               <input type="radio" name="denomination" id="5000" value="5000" onClick={() => setDepositAmount(5000)} />
-              <label for="10000" className="label">10000</label>
+              <label htmlFor="10000" className="label">10000</label>
               <input type="radio" name="denomination" id="10000" value="10000" onClick={() => setDepositAmount(10000)} />
-              <label for="50000" className="label">50000</label>
+              <label htmlFor="50000" className="label">50000</label>
               <input type="radio" name="denomination" id="50000" value="50000" onClick={() => setDepositAmount(50000)} />
             </div>
 
@@ -313,15 +356,15 @@ export default function Home() {
 
             <p className={styles.warning}>Select Denomination</p>
             <div className={styles.denominations}>
-              <label for="w500" className="label">500</label>
-              <input type="radio" name="denomination" id="w500" value="500" onClick={() => setWithdrawalAmount(500)} />
-              <label for="w1000" className="label">1000</label>
+              <label htmlFor="w10" className="label">10</label>
+              <input type="radio" name="denomination" id="w10" value="10" onClick={() => setWithdrawalAmount(10)} />
+              <label htmlFor="w1000" className="label">1000</label>
               <input type="radio" name="denomination" id="w1000" value="1000" onClick={() => setWithdrawalAmount(1000)} />
-              <label for="w5000" className="label">5000</label>
+              <label htmlFor="w5000" className="label">5000</label>
               <input type="radio" name="denomination" id="w5000" value="5000" onClick={() => setWithdrawalAmount(5000)} />
-              <label for="w10000" className="label">10000</label>
+              <label htmlFor="w10000" className="label">10000</label>
               <input type="radio" name="denomination" id="w10000" value="10000" onClick={() => setWithdrawalAmount(10000)} />
-              <label for="w50000" className="label">50000</label>
+              <label htmlFor="w50000" className="label">50000</label>
               <input type="radio" name="denomination" id="w50000" value="50000" onClick={() => setWithdrawalAmount(50000)} />
             </div>
 
@@ -335,7 +378,7 @@ export default function Home() {
               status == "verified" ? <input type="submit" className={styles.withdrawBtn} value="Withdraw" onClick={() => withdraw()} /> : ''
             }
             
-          </a>
+          </div>
         </div>
       </main>
     </div>

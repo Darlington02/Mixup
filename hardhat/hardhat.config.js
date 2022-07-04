@@ -13,7 +13,16 @@ const HARMONY_PRIVATE_KEY = fs.readFileSync(".secret").toString();
 
 module.exports = {
     solidity: {
-        version: "0.8.4",
+        compilers: [
+          {
+            version: "0.8.4",
+          },
+          {
+            version: "0.8.9",
+            settings: {},
+          },
+        ],
+
         optimizer: {
             enabled: true,
             runs: 200
@@ -25,7 +34,7 @@ module.exports = {
             blockGasLimit: 0x1fffffffffffff
         },
         testnet: {
-            url: "https://api.s0.ps.hmny.io/",
+            url: "https://api.s0.b.hmny.io",
             chainId: 1666900000,
             accounts: [`${HARMONY_PRIVATE_KEY}`]
         },
@@ -35,10 +44,14 @@ module.exports = {
             accounts: [`${HARMONY_PRIVATE_KEY}`]
         },
         mainnet: {
-            url: "https://api.s0.t.hmny.io",
+            url: "https://api.harmony.one",
             chainId: 1666600000,
             accounts: [`${HARMONY_PRIVATE_KEY}`]
         },
+        rinkeby: {
+            url: "https://rinkeby.infura.io/v3/b19d3eeaef24491ea6536fd4a48fbd20",
+            accounts: [`${HARMONY_PRIVATE_KEY}`]
+        }
     },
     
     mocha: {
